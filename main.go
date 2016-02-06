@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -9,21 +11,39 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
+var (
 	listenNetwork        = "tcp"
 	listenAddr           = ":5444"
 	dialNetwork          = "tcp"
 	dialAddr             = "192.168.99.100:3306"
-	dialTimeout          = 10 * time.Second
-	reConnect            = 1 * time.Second
+	dialTimeout          = 5 * time.Second
+	retryTime            = 1 * time.Second
 	maxServerConnections = 2
 	maxClinetConnections = 10
+	Version              = "dev"
+	BuildDate            = ""
 )
 
 func main() {
+	var v bool
+	flag.StringVar(&listenNetwork, "listenNetwork", listenNetwork, "Listen network")
+	flag.StringVar(&listenAddr, "listenAddr", listenAddr, "Listen address")
+	flag.StringVar(&dialNetwork, "dialNetwork", dialNetwork, "Dial network")
+	flag.StringVar(&dialAddr, "dialAddr", dialAddr, "Dial address")
+	flag.DurationVar(&dialTimeout, "dialTimeout", dialTimeout, "Dial timeout")
+	flag.DurationVar(&retryTime, "retryTime", retryTime, "retry wait time")
+	flag.IntVar(&maxServerConnections, "maxServer", maxServerConnections, "Max server connections")
+	flag.IntVar(&maxClinetConnections, "maxClinet", maxClinetConnections, "Max client connections")
+	flag.BoolVar(&v, "version", v, "Show version")
+	flag.Parse()
+	if v {
+		fmt.Printf("version: %s %s\n", Version, BuildDate)
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
-	mainLoop(ctx)
 	defer cancel()
+	mainLoop(ctx)
 
 }
 
@@ -66,7 +86,7 @@ func dial(ctx context.Context, clientCh chan *net.TCPConn) {
 				svConn, err = net.DialTimeout(dialNetwork, dialAddr, dialTimeout)
 				if err != nil {
 					log.Printf("dial err:%s, addr:%s", err, dialAddr)
-					time.Sleep(reConnect * time.Duration(i*i))
+					time.Sleep(retryTime * time.Duration(i*i))
 					continue
 				}
 				break
