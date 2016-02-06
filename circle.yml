@@ -10,7 +10,6 @@ machine:
 dependencies:
   pre:
     - git tag -l 
-    - git tag -d v1.0.0
     - go get -u github.com/alecthomas/gometalinter
     - gometalinter --install
 test:
