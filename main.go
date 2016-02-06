@@ -15,6 +15,7 @@ const (
 	dialNetwork          = "tcp"
 	dialAddr             = "192.168.99.100:3306"
 	dialTimeout          = 10 * time.Second
+	reConnect            = 1 * time.Second
 	maxServerConnections = 2
 	maxClinetConnections = 10
 )
@@ -46,35 +47,40 @@ func mainLoop(ctx context.Context) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(10 * time.Second)
 		clientCh <- conn
 	}
 }
 
 func dial(ctx context.Context, clientCh chan *net.TCPConn) {
 	for {
-		svConn, err := net.DialTimeout(dialNetwork, dialAddr, dialTimeout)
-		if err != nil {
-			log.Printf("dial err:%s, addr:%s", err, dialAddr)
-			time.Sleep(dialTimeout)
-			continue
-		}
+		//log.Printf("svConn:%v", svConn)
 		select {
 		case <-ctx.Done():
 			return
 		case client := <-clientCh:
+			var err error
+			var svConn net.Conn
+			for i := 0; i < 5; i++ {
+				svConn, err = net.DialTimeout(dialNetwork, dialAddr, dialTimeout)
+				if err != nil {
+					log.Printf("dial err:%s, addr:%s", err, dialAddr)
+					time.Sleep(reConnect * time.Duration(i*i))
+					continue
+				}
+				break
+			}
 			errch1 := pipe(client, svConn)
 			errch2 := pipe(svConn, client)
-			var err1, err2 error
-			for i := 0; i < 2; i++ {
-				select {
-				case err1 = <-errch1:
-				case err2 = <-errch2:
-				case <-ctx.Done():
-					return
-				}
+			select {
+			case err = <-errch1:
+			case err = <-errch2:
+			case <-ctx.Done():
+				return
 			}
-			if err1 != io.EOF || err2 != io.EOF {
-				log.Printf("pipe err1:%s, err2:%s", err1, err2)
+			if err != nil && err != io.EOF {
+				log.Printf("pipe err:%s", err)
 			}
 			client.Close()
 			svConn.Close()
