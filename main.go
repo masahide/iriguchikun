@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -61,58 +62,74 @@ func mainLoop(ctx context.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer l.Close()
 	for {
-		// Wait for a connection.
 		conn, err := l.AcceptTCP()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			break
 		}
-		conn.SetKeepAlive(true)
-		conn.SetKeepAlivePeriod(10 * time.Second)
+		if err := conn.SetKeepAlive(true); err != nil {
+			log.Println(err)
+		}
+		if err := conn.SetKeepAlivePeriod(10 * time.Second); err != nil {
+			log.Println(err)
+		}
 		clientCh <- conn
+	}
+	if err := l.Close(); err != nil {
+		log.Println(err)
 	}
 }
 
 func dial(ctx context.Context, clientCh chan *net.TCPConn) {
 	for {
-		//log.Printf("svConn:%v", svConn)
 		select {
 		case <-ctx.Done():
 			return
 		case client := <-clientCh:
-			var err error
-			var svConn net.Conn
-			for i := 0; i < 5; i++ {
-				svConn, err = net.DialTimeout(dialNetwork, dialAddr, dialTimeout)
-				if err != nil {
-					log.Printf("dial err:%s, addr:%s", err, dialAddr)
-					time.Sleep(retryTime * time.Duration(i*i))
-					continue
-				}
-				break
-			}
-			errch1 := pipe(client, svConn)
-			errch2 := pipe(svConn, client)
-			select {
-			case err = <-errch1:
-			case err = <-errch2:
-			case <-ctx.Done():
-				return
-			}
-			if err != nil && err != io.EOF {
-				log.Printf("pipe err:%s", err)
-			}
-			client.Close()
-			svConn.Close()
+			dialToPipe(ctx, client)
 		}
 	}
 }
 
-func pipe(a, b net.Conn) chan error {
+func dialToPipe(ctx context.Context, client *net.TCPConn) {
+	svConn, err := openSvConn()
+	errch1 := pipe(client, svConn)
+	errch2 := pipe(svConn, client)
+	select {
+	case err = <-errch1:
+	case err = <-errch2:
+	case <-ctx.Done():
+		return
+	}
+	if err != nil && err != io.EOF {
+		log.Printf("pipe err:%s", err)
+	}
+	if err := client.Close(); err != nil {
+		log.Printf("client.Close err:%s", err)
+	}
+	if err := svConn.Close(); err != nil {
+		log.Printf("svConn.Close err:%s", err)
+	}
+}
+
+func openSvConn() (net.Conn, error) {
+	for i := 0; i < 5; i++ {
+		svConn, err := net.DialTimeout(dialNetwork, dialAddr, dialTimeout)
+		if err != nil {
+			log.Printf("dial err:%s, addr:%s", err, dialAddr)
+			time.Sleep(retryTime * time.Duration(i*i))
+			continue
+		}
+		return svConn, nil
+	}
+	return nil, errors.New("dial The retry was give up")
+}
+
+func pipe(out io.Writer, in io.Reader) chan error {
 	errCh := make(chan error, 1)
 	go func() {
-		_, err := io.Copy(a, b)
+		_, err := io.Copy(out, in)
 		errCh <- err
 	}()
 	return errCh

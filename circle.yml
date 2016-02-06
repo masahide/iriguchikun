@@ -7,11 +7,15 @@ machine:
       echo "export BUILD_VERSION=\"`git --git-dir=${CHECKOUT_PATH}/.git describe --always --dirty`\"" >> ~/.circlerc;
       echo "export BUILD_DATE=\"`date +%FT%T%z`\"" >> ~/.circlerc;
       cat ~/.circlerc
+dependencies:
+  pre:
+    - go get -u github.com/alecthomas/gometalinter
+    - gometalinter --install
 test:
   override:
+    - go get ./...
     - test -z "$(gofmt -s -l . | tee /dev/stderr)"
-    - go vet ./...
-    - test -z "$(golint ./... | tee /dev/stderr)"
+    - gometalinter ./...
     - go test -race -test.v ./...
 deployment:
   release:
