@@ -40,11 +40,9 @@ func main() {
 		fmt.Printf("version: %s %s\n", Version, BuildDate)
 		return
 	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	mainLoop(ctx)
-
 }
 
 func mainLoop(ctx context.Context) {
