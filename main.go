@@ -21,7 +21,7 @@ var (
 	maxServerConnections = 2
 	maxClinetConnections = 10
 	Version              = "dev"
-	BuildDate            = ""
+	Date                 = ""
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 	flag.BoolVar(&v, "version", v, "Show version")
 	flag.Parse()
 	if v {
-		fmt.Printf("version: %s %s\n", Version, BuildDate)
+		fmt.Printf("version: %s %s\n", Version, Date)
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
