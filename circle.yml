@@ -11,7 +11,7 @@ dependencies:
   pre:
     - go get -u github.com/alecthomas/gometalinter
     - gometalinter --install
-    - git tag -d 1.0.0 1.0.0-1-g901c8c4 1.0.1 1.0.2 1.0.2-1-gee17bc4 1.0.3 1.0.3-1-g5dd2b78 1.0.3-1-g5dd2b78-3-gde65384
+    - git tag -l 
     - go get -v -t -u ./...
 test:
   override:
