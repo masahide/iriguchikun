@@ -20,8 +20,11 @@ var (
 	retryTime            = 1 * time.Second
 	maxServerConnections = 2
 	maxClinetConnections = 10
-	Version              = "dev"
-	Date                 = ""
+
+	// Version is version number
+	Version = "dev"
+	// Date is build date
+	Date = ""
 )
 
 func main() {

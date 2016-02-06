@@ -7,6 +7,12 @@ machine:
       echo "export BUILD_VERSION=\"`git --git-dir=${CHECKOUT_PATH}/.git describe --always --dirty`\"" >> ~/.circlerc;
       echo "export BUILD_DATE=\"`date +%FT%T%z`\"" >> ~/.circlerc;
       cat ~/.circlerc
+test:
+  override:
+    - test -z "$(gofmt -s -l . | tee /dev/stderr)"
+    - go vet ./...
+    - test -z "$(golint ./... | tee /dev/stderr)"
+    - go test -race -test.v ./...
 deployment:
   release:
      branch: master
