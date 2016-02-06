@@ -1,6 +1,10 @@
 # 入り口くん
+[![Circle CI](https://circleci.com/gh/masahide/iriguchikun.svg?style=svg)](https://circleci.com/gh/masahide/iriguchikun)
 
-TCPの同時接続数を制限するdaemonです。
+TCPの同時接続数の調整を行うdaemonです。
+
+* サーバーの最大接続数を超えた場合に、クライアントからの接続を順番待ちさせる
+* 順番待ちのクライアントはtcp-keepaliveで接続維持
 
 
 # Usage 
