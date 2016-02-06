@@ -1,4 +1,12 @@
 # circle.yml
+machine:
+  environment:
+      CHECKOUT_PATH: $HOME/$CIRCLE_PROJECT_REPONAME
+    post:
+      - >
+      echo "export BUILD_VERSION=\"`git --git-dir=${CHECKOUT_PATH}/.git describe --always --dirty`\"" >> ~/.circlerc;
+      echo "export BUILD_DATE=\"`date +%FT%T%z`\"" >> ~/.circlerc;
+      cat ~/.circlerc
 deployment:
   release:
      branch: master
