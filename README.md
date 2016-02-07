@@ -11,6 +11,7 @@ TCPの同時接続数の調整を行うdaemonです。
 
 ```
 $ ./iriguchikun --help
+flag provided but not defined: -he
 Usage of ./iriguchikun:
   -dialAddr string
     	Dial address (default "192.168.99.100:3306")
@@ -26,8 +27,10 @@ Usage of ./iriguchikun:
     	Max client connections (default 10)
   -maxServer int
     	Max server connections (default 2)
+  -pipeDeadLine duration
+    	Pipe dead line wait time (default 2m0s)
   -retryTime duration
-    	retry wait time (default 1s)
+    	Retry wait time (default 1s)
   -version
     	Show version
 ```
