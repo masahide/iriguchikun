@@ -18,6 +18,7 @@ var (
 	dialNetwork          = "tcp"
 	dialAddr             = "192.168.99.100:3306"
 	dialTimeout          = 5 * time.Second
+	pipeDeadLine         = 120 * time.Second
 	retryTime            = 1 * time.Second
 	maxServerConnections = 2
 	maxClinetConnections = 10
@@ -35,7 +36,8 @@ func main() {
 	flag.StringVar(&dialNetwork, "dialNetwork", dialNetwork, "Dial network")
 	flag.StringVar(&dialAddr, "dialAddr", dialAddr, "Dial address")
 	flag.DurationVar(&dialTimeout, "dialTimeout", dialTimeout, "Dial timeout")
-	flag.DurationVar(&retryTime, "retryTime", retryTime, "retry wait time")
+	flag.DurationVar(&retryTime, "retryTime", retryTime, "Retry wait time")
+	flag.DurationVar(&pipeDeadLine, "pipeDeadLine", pipeDeadLine, "Pipe dead line wait time")
 	flag.IntVar(&maxServerConnections, "maxServer", maxServerConnections, "Max server connections")
 	flag.IntVar(&maxClinetConnections, "maxClinet", maxClinetConnections, "Max client connections")
 	flag.BoolVar(&v, "version", v, "Show version")
@@ -55,29 +57,19 @@ func mainLoop(ctx context.Context) {
 		go dial(ctx, clientCh)
 	}
 	addr, err := net.ResolveTCPAddr(listenNetwork, listenAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	errFatal(err)
 	l, err := net.ListenTCP(listenNetwork, addr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	errFatal(err)
+	defer closeConn(l)
 	for {
 		conn, err := l.AcceptTCP()
 		if err != nil {
 			log.Println(err)
-			break
+			continue
 		}
-		if err := conn.SetKeepAlive(true); err != nil {
-			log.Println(err)
-		}
-		if err := conn.SetKeepAlivePeriod(10 * time.Second); err != nil {
-			log.Println(err)
-		}
+		errPrint(conn.SetKeepAlive(true))
+		errPrint(conn.SetKeepAlivePeriod(10 * time.Second))
 		clientCh <- conn
-	}
-	if err := l.Close(); err != nil {
-		log.Println(err)
 	}
 }
 
@@ -93,7 +85,20 @@ func dial(ctx context.Context, clientCh chan *net.TCPConn) {
 }
 
 func dialToPipe(ctx context.Context, client *net.TCPConn) {
+	defer closeConn(client)
 	svConn, err := openSvConn()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer closeConn(svConn)
+	deadline := time.Now().Add(pipeDeadLine)
+	if err := svConn.SetDeadline(deadline); err != nil {
+		log.Printf("svConn.SetDeadline err:%s", err)
+	}
+	if err := client.SetDeadline(deadline); err != nil {
+		log.Printf("client.SetDeadline err:%s", err)
+	}
 	errch1 := pipe(client, svConn)
 	errch2 := pipe(svConn, client)
 	select {
@@ -105,11 +110,11 @@ func dialToPipe(ctx context.Context, client *net.TCPConn) {
 	if err != nil && err != io.EOF {
 		log.Printf("pipe err:%s", err)
 	}
-	if err := client.Close(); err != nil {
-		log.Printf("client.Close err:%s", err)
-	}
-	if err := svConn.Close(); err != nil {
-		log.Printf("svConn.Close err:%s", err)
+}
+
+func closeConn(c io.Closer) {
+	if err := c.Close(); err != nil {
+		log.Printf("%T Close err:%s ", c, err)
 	}
 }
 
@@ -133,4 +138,14 @@ func pipe(out io.Writer, in io.Reader) chan error {
 		errCh <- err
 	}()
 	return errCh
+}
+func errPrint(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+}
+func errFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
