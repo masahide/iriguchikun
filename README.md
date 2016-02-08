@@ -1,5 +1,6 @@
 # 入り口くん
-[![Circle CI](https://circleci.com/gh/masahide/iriguchikun.svg?style=svg)](https://circleci.com/gh/masahide/iriguchikun)
+[![Circle CI](https://circleci.com/gh/masahide/iriguchikun.svg?style=svg)](https://circleci.com/gh/masahide/iriguchikun) [![Coverage Status](https://coveralls.io/repos/github/masahide/iriguchikun/badge.svg?branch=master)](https://coveralls.io/github/masahide/iriguchikun?branch=master)
+
 
 TCPの同時接続数の調整を行うdaemonです。
 
