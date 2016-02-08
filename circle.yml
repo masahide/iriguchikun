@@ -3,7 +3,7 @@ machine:
   environment:
     CHECKOUT_PATH: $HOME/$CIRCLE_PROJECT_REPONAME
   post:
-    - >
+    - |
       echo "export BUILD_DATE=\"`date +%FT%T%z`\"" >> ~/.circlerc;
       cat ~/.circlerc|sed 's/.*GITHUB_TOKEN.*//g'
 dependencies:
@@ -13,6 +13,11 @@ dependencies:
     - gometalinter --install
 test:
   override:
+    - |
+      DIR=$(git remote -v |grep '^origin\t.*\(fetch\)'|sed 's/^.*@\(.*\):\([^\/]*\)\/\([^\/]*\)\..*/\1\/\2\/\3/')
+      echo rm -rf $GOPATH/$DIR
+      echo mkdir -p $(dirname $GOPATH/$DIR) 
+      echo ln -s $(pwd) $GOPATH/$DIR
     - go get -v -t ./...
     - test -z "$(gofmt -s -l . | tee /dev/stderr)"
     - gometalinter --deadline 30s ./...
