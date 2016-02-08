@@ -31,9 +31,9 @@ func (t *TCPProxy) MainLoop(ctx context.Context) {
 		go t.dialWorker(ctx, clientCh)
 	}
 	addr, err := net.ResolveTCPAddr(t.ListenNetwork, t.ListenAddr)
-	checkFatal(err)
+	printErr(log.Fatal, err)
 	l, err := net.ListenTCP(t.ListenNetwork, addr)
-	checkFatal(err)
+	printErr(log.Fatal, err)
 	defer closeConn(l)
 	go t.acceptWorker(ctx, l, clientCh)
 	<-ctx.Done()
@@ -57,8 +57,8 @@ func (t *TCPProxy) acceptWorker(ctx context.Context, l *net.TCPListener, clientC
 			log.Println(err)
 			continue
 		}
-		printErr(conn.SetKeepAlive(true))
-		printErr(conn.SetKeepAlivePeriod(10 * time.Second))
+		printErr(log.Println, conn.SetKeepAlive(true))
+		printErr(log.Println, conn.SetKeepAlivePeriod(10*time.Second))
 		clientCh <- conn
 	}
 }
@@ -72,8 +72,8 @@ func (t *TCPProxy) dialToPipe(ctx context.Context, client *net.TCPConn) {
 	}
 	defer closeConn(svConn)
 	deadline := time.Now().Add(t.PipeDeadLine)
-	printErr(svConn.SetDeadline(deadline))
-	printErr(client.SetDeadline(deadline))
+	printErr(log.Println, svConn.SetDeadline(deadline))
+	printErr(log.Println, client.SetDeadline(deadline))
 	errch1 := pipe(client, svConn)
 	errch2 := pipe(svConn, client)
 	select {
@@ -114,13 +114,9 @@ func closeConn(c io.Closer) {
 		log.Printf("%T Close err:%s ", c, err)
 	}
 }
-func printErr(err error) {
+
+func printErr(printFunc func(...interface{}), err error) {
 	if err != nil {
-		log.Println(err)
-	}
-}
-func checkFatal(err error) {
-	if err != nil {
-		log.Fatal(err)
+		printFunc(err)
 	}
 }
