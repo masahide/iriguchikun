@@ -25,6 +25,7 @@ var (
 		RetryTime:            1 * time.Second,
 		MaxServerConnections: 2,
 		MaxClinetConnections: 10,
+		DebugLevel:           0,
 	}
 	showVer bool
 )
@@ -39,6 +40,7 @@ func init() {
 	flag.DurationVar(&t.PipeDeadLine, "pipeDeadLine", t.PipeDeadLine, "Pipe dead line wait time")
 	flag.IntVar(&t.MaxServerConnections, "maxServer", t.MaxServerConnections, "Max server connections")
 	flag.IntVar(&t.MaxClinetConnections, "maxClinet", t.MaxClinetConnections, "Max client connections")
+	flag.IntVar(&t.DebugLevel, "debug", t.DebugLevel, "debug level")
 	flag.BoolVar(&showVer, "version", showVer, "Show version")
 	flag.Parse()
 }

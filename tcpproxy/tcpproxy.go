@@ -22,6 +22,19 @@ type TCPProxy struct {
 	RetryTime            time.Duration
 	MaxServerConnections int
 	MaxClinetConnections int
+	DebugLevel           int
+}
+
+func debugWorker(ctx context.Context, clientCh chan *net.TCPConn) {
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			log.Printf("Waiting client connections: %d", len(clientCh))
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // MainLoop ctxでキャンセルされるまでloop
@@ -29,6 +42,9 @@ func (t *TCPProxy) MainLoop(ctx context.Context) {
 	clientCh := make(chan *net.TCPConn, t.MaxClinetConnections)
 	for i := 0; i < t.MaxServerConnections; i++ {
 		go t.dialWorker(ctx, clientCh)
+	}
+	if t.DebugLevel > 0 {
+		go debugWorker(ctx, clientCh)
 	}
 	addr, err := net.ResolveTCPAddr(t.ListenNetwork, t.ListenAddr)
 	printErr(log.Fatal, err)
