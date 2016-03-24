@@ -11,6 +11,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	backoffMaxRetry = 5
+)
+
 // TCPProxy is main struct
 type TCPProxy struct {
 	ListenNetwork        string
@@ -80,31 +84,37 @@ func (t *TCPProxy) acceptWorker(ctx context.Context, l *net.TCPListener, clientC
 }
 
 func (t *TCPProxy) dialToPipe(ctx context.Context, client *net.TCPConn) {
-	defer closeConn(client)
 	svConn, err := t.openSvConn()
 	if err != nil {
 		log.Println(err)
+		closeConn(client)
 		return
 	}
-	defer closeConn(svConn)
 	deadline := time.Now().Add(t.PipeDeadLine)
 	printErr(log.Println, svConn.SetDeadline(deadline))
 	printErr(log.Println, client.SetDeadline(deadline))
-	errch1 := pipe(client, svConn)
-	errch2 := pipe(svConn, client)
+	errCl2Sv := pipe(client, svConn)
+	errSv2Cl := pipe(svConn, client)
 	select {
-	case err = <-errch1:
-	case err = <-errch2:
+	case err = <-errCl2Sv:
+	case err = <-errSv2Cl:
 	case <-ctx.Done():
-		return
 	}
 	if err != nil && err != io.EOF {
 		log.Printf("pipe err:%s", err)
 	}
+	closeConn(client)
+	closeConn(svConn)
+
+	//残ったメッセージを読み捨てる
+	for range errCl2Sv {
+	}
+	for range errSv2Cl {
+	}
 }
 
 func (t *TCPProxy) openSvConn() (net.Conn, error) {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < backoffMaxRetry; i++ { // exponential backoff
 		svConn, err := net.DialTimeout(t.DialNetwork, t.DialAddr, t.DialTimeout)
 		if err != nil {
 			log.Printf("dial err:%s, addr:%s", err, t.DialAddr)
@@ -121,6 +131,7 @@ func pipe(out io.Writer, in io.Reader) chan error {
 	go func() {
 		_, err := io.Copy(out, in)
 		errCh <- err
+		close(errCh)
 	}()
 	return errCh
 }
