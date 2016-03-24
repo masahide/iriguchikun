@@ -2,7 +2,7 @@
 package tcpproxy
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -93,15 +93,15 @@ func (t *TCPProxy) dialToPipe(ctx context.Context, client *net.TCPConn) {
 	deadline := time.Now().Add(t.PipeDeadLine)
 	printErr(log.Println, svConn.SetDeadline(deadline))
 	printErr(log.Println, client.SetDeadline(deadline))
-	errCl2Sv := pipe(client, svConn)
-	errSv2Cl := pipe(svConn, client)
+	errSv2Cl := pipe(client, svConn)
+	errCl2Sv := pipe(svConn, client)
 	select {
 	case err = <-errCl2Sv:
 	case err = <-errSv2Cl:
 	case <-ctx.Done():
 	}
 	if err != nil && err != io.EOF {
-		log.Printf("pipe err:%s", err)
+		log.Printf("pipe err:%s addr:%s", err, t.DialAddr)
 	}
 	closeConn(client)
 	closeConn(svConn)
@@ -123,7 +123,7 @@ func (t *TCPProxy) openSvConn() (net.Conn, error) {
 		}
 		return svConn, nil
 	}
-	return nil, errors.New("dial The retry was give up")
+	return nil, fmt.Errorf("dial The retry was give up. addr:%s", t.DialAddr)
 }
 
 func pipe(out io.Writer, in io.Reader) chan error {
