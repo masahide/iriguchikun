@@ -1,5 +1,6 @@
-SOURCE_FILES?="./cmd/./... ./lib/./..."
+SOURCE_FILES?=./...
 BIN?=iriguchikun
+PKG?=./lib/netproxy
 TEST_PATTERN?=.
 TEST_OPTIONS?=
 OS=$(shell uname -s)
@@ -28,7 +29,7 @@ check:
 
 # Run all the tests
 test:
-	go test $(TEST_OPTIONS) -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt $(SOURCE_FILES) -run $(TEST_PATTERN) -timeout=2m
+	go test $(TEST_OPTIONS) -v -race -coverpkg=$(PKG) -covermode=atomic -coverprofile=coverage.txt $(PKG) -run $(TEST_PATTERN) -timeout=2m
 .PHONY: cover
 
 # Run all the tests and opens the coverage report
