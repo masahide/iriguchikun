@@ -30,31 +30,28 @@ archive:
     linux: Linux
     windows: Windows
     amd64: x86_64
-  format_overrides:
-    - goos: windows
-      format: zip
 brew:
   github:
     owner: masahide
     name: iriguchikun
   folder: Formula
   homepage:  https://github.com/masahide/iriguchikun
-  description: AWS assume role credential wrapper
+  description: tcp/udp/unix domain socket proxy
   test: |
     system "#{bin}/iriguchikun -v"
-fpm:
+nfpm:
   name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   homepage:  https://github.com/masahide/iriguchikun
-  description: AWS assume role credential wrapper
+  description: tcp/udp/unix domain socket proxy
   maintainer: YAMASAKI Masahide <masahide.y@gmail.com>
   license: MIT
-  vendor: Assumer
+  vendor: YAMASAKI Masahide
   formats:
     - deb
     - rpm
-# snapcraft:
-#   name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-#   summary: AWS assume role credential wrapper
-#   description: AWS assume role credential wrapper
-#   grade: stable
-#   confinement: classic
+snapcraft:
+  name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  summary: tcp/udp/unix domain socket proxy
+  description: tcp/udp/unix domain socket proxy
+  grade: stable
+  confinement: classic
