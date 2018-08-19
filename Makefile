@@ -14,11 +14,11 @@ setup:
 	go get -t github.com/pierrre/gotestcover
 	go get -t golang.org/x/tools/cmd/cover
 	go get -t github.com/caarlos0/bandep
+	go get -t github.com/golang/dep/cmd/dep
 	dep ensure
 	gometalinter --install
 	echo "make check" > .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
-	go get -t github.com/golang/dep/cmd/dep
 
 ifeq ($(OS), Darwin)
 	brew install dep
