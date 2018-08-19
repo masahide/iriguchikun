@@ -15,6 +15,7 @@ setup:
 	go get -t golang.org/x/tools/cmd/cover
 	go get -t github.com/caarlos0/bandep
 	go get -t github.com/golang/dep/cmd/dep
+	go get -t github.com/alecthomas/gometalinter
 	dep ensure
 	gometalinter --install
 	echo "make check" > .git/hooks/pre-commit
