@@ -9,10 +9,17 @@ export PATH := ./bin:$(PATH)
 
 # Install all the build and lint dependencies
 setup:
-	go get -u golang.org/x/tools/cmd/stringer
-	go get -u golang.org/x/tools/cmd/cover
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh
-	curl -sfL https://install.goreleaser.com/github.com/caarlos0/bandep.sh | sh
+	go get -t golang.org/x/tools/cmd/stringer
+	go get -t golang.org/x/tools/cmd/cover
+	go get -t github.com/pierrre/gotestcover
+	go get -t golang.org/x/tools/cmd/cover
+	go get -t github.com/caarlos0/bandep
+	dep ensure
+	gometalinter --install
+	echo "make check" > .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	go get -t github.com/golang/dep/cmd/dep
+
 ifeq ($(OS), Darwin)
 	brew install dep
 else
@@ -44,7 +51,7 @@ fmt:
 
 # Run all the linters
 lint:
-	./bin/golangci-lint run --tests=false --enable-all --disable=lll ./...
+	gometalinter --deadline 3m --vendor ./...
 .PHONY: lint
 
 # Run all the tests and code checks
