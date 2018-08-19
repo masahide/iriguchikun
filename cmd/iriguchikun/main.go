@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"time"
 
-	"github.com/masahide/iriguchikun/tcpproxy"
-	"golang.org/x/net/context"
+	"github.com/masahide/iriguchikun/lib/netproxy"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 	Version = "dev"
 	// Date is build date
 	Date = ""
-	t    = tcpproxy.TCPProxy{
+	t    = netproxy.NetProxy{
 		ListenNetwork:        "tcp",
 		ListenAddr:           ":5444",
 		DialNetwork:          "tcp",
@@ -23,6 +23,9 @@ var (
 		DialTimeout:          5 * time.Second,
 		PipeDeadLine:         120 * time.Second,
 		RetryTime:            1 * time.Second,
+		KeepAlive:            true,
+		KeepAlivePeriod:      10 * time.Second,
+		MaxRetry:             5,
 		MaxServerConnections: 2,
 		MaxClinetConnections: 10,
 		DebugLevel:           0,
@@ -31,13 +34,16 @@ var (
 )
 
 func init() {
-	flag.StringVar(&t.ListenNetwork, "listenNetwork", t.ListenNetwork, "Listen network")
-	flag.StringVar(&t.ListenAddr, "listenAddr", t.ListenAddr, "Listen address")
-	flag.StringVar(&t.DialNetwork, "dialNetwork", t.DialNetwork, "Dial network")
-	flag.StringVar(&t.DialAddr, "dialAddr", t.DialAddr, "Dial address")
+	flag.StringVar(&t.ListenNetwork, "listenNetwork", t.ListenNetwork, "Listen network (tcp or udp or unix)")
+	flag.StringVar(&t.ListenAddr, "listenAddr", t.ListenAddr, "Listen address (ipaddress or /path/to/xxx.sock)")
+	flag.StringVar(&t.DialNetwork, "dialNetwork", t.DialNetwork, "Dial network (tcp or udp or unix)")
+	flag.StringVar(&t.DialAddr, "dialAddr", t.DialAddr, "Dial address (ipaddress or /path/to/xxx.sock)")
 	flag.DurationVar(&t.DialTimeout, "dialTimeout", t.DialTimeout, "Dial timeout")
 	flag.DurationVar(&t.RetryTime, "retryTime", t.RetryTime, "Retry wait time")
+	flag.IntVar(&t.MaxRetry, "maxRetry", t.MaxRetry, "Max retry")
 	flag.DurationVar(&t.PipeDeadLine, "pipeDeadLine", t.PipeDeadLine, "Pipe dead line wait time")
+	flag.DurationVar(&t.KeepAlivePeriod, "keepAlivePeriod", t.KeepAlivePeriod, "TCP period between keep alives")
+	flag.BoolVar(&t.KeepAlive, "keepAlive", t.KeepAlive, "send keepalive messages on the connection")
 	flag.IntVar(&t.MaxServerConnections, "maxServer", t.MaxServerConnections, "Max server connections")
 	flag.IntVar(&t.MaxClinetConnections, "maxClinet", t.MaxClinetConnections, "Max client connections")
 	flag.IntVar(&t.DebugLevel, "debug", t.DebugLevel, "debug level")

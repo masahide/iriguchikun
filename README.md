@@ -1,5 +1,9 @@
 # 入り口くん
 [![Circle CI](https://circleci.com/gh/masahide/iriguchikun.svg?style=svg)](https://circleci.com/gh/masahide/iriguchikun) [![Coverage Status](https://coveralls.io/repos/github/masahide/iriguchikun/badge.svg?branch=master)](https://coveralls.io/github/masahide/iriguchikun?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/masahide/iriguchikun)](https://goreportcard.com/report/github.com/masahide/iriguchikun)
+[![Build Status](https://travis-ci.org/masahide/iriguchikun.svg?branch=master)](https://travis-ci.org/masahide/iriguchikun)
+[![codecov](https://codecov.io/gh/masahide/iriguchikun/branch/master/graph/badge.svg)](https://codecov.io/gh/masahide/iriguchikun)
+[![goreleaser](https://img.shields.io/badge/powered%20by-goreleaser-green.svg?style=flat-square)](https://github.com/goreleaser)
 
 
 TCPの同時接続数の調整を行うdaemonです。
