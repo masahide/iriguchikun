@@ -5,14 +5,11 @@ TEST_OPTIONS?=
 
 # Install all the build and lint dependencies
 setup:
-	go get -u github.com/go-ini/ini
-	go get -u github.com/kelseyhightower/envconfig
-	go get -u github.com/mitchellh/go-homedir
 	go get -u github.com/alecthomas/gometalinter
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u github.com/pierrre/gotestcover
 	go get -u golang.org/x/tools/cmd/cover
-	go get -u github.com/apex/static/cmd/static-docs
+	# go get -u github.com/apex/static/cmd/static-docs
 	go get -u github.com/caarlos0/bandep
 	dep ensure
 	gometalinter --install
