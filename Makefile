@@ -2,17 +2,22 @@ SOURCE_FILES?="./cmd/./... ./lib/./..."
 BIN?=iriguchikun
 TEST_PATTERN?=.
 TEST_OPTIONS?=
+OS=$(shell uname -s)
+
+export PATH := ./bin:$(PATH)
 
 # Install all the build and lint dependencies
 setup:
-	go get -u github.com/alecthomas/gometalinter
-	go get -u github.com/golang/dep/cmd/dep
-	go get -u github.com/pierrre/gotestcover
+	go get -u golang.org/x/tools/cmd/stringer
 	go get -u golang.org/x/tools/cmd/cover
-	# go get -u github.com/apex/static/cmd/static-docs
-	go get -u github.com/caarlos0/bandep
-	dep ensure
-	gometalinter --install
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh
+	curl -sfL https://install.goreleaser.com/github.com/caarlos0/bandep.sh | sh
+ifeq ($(OS), Darwin)
+	brew install dep
+else
+	curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+endif
+	dep ensure -vendor-only
 	echo "make check" > .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
 .PHONY: setup
@@ -23,7 +28,7 @@ check:
 
 # Run all the tests
 test:
-	gotestcover $(TEST_OPTIONS) -covermode=atomic -coverprofile=coverage.txt $(SOURCE_FILES) -run $(TEST_PATTERN) -timeout=2m
+	go test $(TEST_OPTIONS) -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt $(SOURCE_FILES) -run $(TEST_PATTERN) -timeout=2m
 .PHONY: cover
 
 # Run all the tests and opens the coverage report
@@ -38,7 +43,7 @@ fmt:
 
 # Run all the linters
 lint:
-	gometalinter --deadline 3m --vendor ./...
+	./bin/golangci-lint run --tests=false --enable-all --disable=lll ./...
 .PHONY: lint
 
 # Run all the tests and code checks
