@@ -138,9 +138,11 @@ func TestMainLoop(t *testing.T) {
 	inSock := path.Join(tmpDir, "in.sock")
 	ctx, cancel := context.WithCancel(context.Background())
 	log.SetOutput(os.Stderr)
+	defer log.SetOutput(os.Stderr)
 	log.SetFlags(log.LstdFlags)
+	defer log.SetFlags(log.LstdFlags)
 	outSock := startTmpListener(ctx)
-	tp := &NetProxy{
+	np := &NetProxy{
 		ListenNetwork:        "unix",
 		ListenAddr:           inSock,
 		DialNetwork:          "unix",
@@ -155,14 +157,13 @@ func TestMainLoop(t *testing.T) {
 		MaxClinetConnections: 1,
 		DebugLevel:           1,
 	}
-	go tp.MainLoop(ctx)
+	go np.MainLoop(ctx)
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 }
 
-/*
 func TestDialWorker(t *testing.T) {
-	tp := NetProxy{
+	np := NetProxy{
 		ListenNetwork:        "tcp",
 		ListenAddr:           ":5444",
 		DialNetwork:          "tcp",
@@ -179,12 +180,11 @@ func TestDialWorker(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	clientCh := make(chan net.Conn, 1)
-	go tp.dialWorker(ctx, clientCh)
+	go np.dialWorker(ctx, clientCh)
 	clientCh <- &net.TCPConn{}
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 }
-*/
 
 func TestAcceptWorker(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "iriguchikun")
@@ -194,10 +194,8 @@ func TestAcceptWorker(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	inSock := path.Join(tmpDir, "in.sock")
 	ctx, cancel := context.WithCancel(context.Background())
-	log.SetOutput(os.Stderr)
-	log.SetFlags(log.LstdFlags)
 	outSock := startTmpListener(ctx)
-	tp := &NetProxy{
+	np := &NetProxy{
 		ListenNetwork:        "unix",
 		ListenAddr:           inSock,
 		DialNetwork:          "unix",
@@ -218,7 +216,7 @@ func TestAcceptWorker(t *testing.T) {
 	defer log.SetOutput(os.Stderr)
 	log.SetFlags(0)
 	defer log.SetFlags(log.LstdFlags)
-	go tp.acceptWorker(ctx, &listenerMock{&net.TCPConn{}}, clientCh)
+	go np.acceptWorker(ctx, &listenerMock{&net.TCPConn{}}, clientCh)
 	clientCh <- &net.TCPConn{}
 	time.Sleep(100 * time.Millisecond)
 	cancel()
@@ -270,7 +268,7 @@ func TestOpenSvConn(t *testing.T) {
 	log.SetOutput(os.Stderr)
 	log.SetFlags(log.LstdFlags)
 	outSock := startTmpListener(ctx)
-	tp := &NetProxy{
+	np := &NetProxy{
 		ListenNetwork:        "unix",
 		ListenAddr:           inSock,
 		DialNetwork:          "unix",
@@ -285,11 +283,47 @@ func TestOpenSvConn(t *testing.T) {
 		MaxClinetConnections: 1,
 		DebugLevel:           1,
 	}
-	_, err = tp.openSvConn()
+	_, err = np.openSvConn()
 	if err != nil {
 		t.Fatal(err)
 	}
 	cancel()
+}
+
+func TestDialToPipe(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "iriguchikun")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	inSock := path.Join(tmpDir, "in.sock")
+	ctx, cancel := context.WithCancel(context.Background())
+	outSock := startTmpListener(ctx)
+	np := &NetProxy{
+		ListenNetwork:        "unix",
+		ListenAddr:           inSock,
+		DialNetwork:          "unix",
+		DialAddr:             outSock,
+		DialTimeout:          1 * time.Second,
+		PipeDeadLine:         1 * time.Second,
+		RetryTime:            1 * time.Second,
+		KeepAlive:            true,
+		KeepAlivePeriod:      10 * time.Second,
+		MaxRetry:             5,
+		MaxServerConnections: 1,
+		MaxClinetConnections: 1,
+		DebugLevel:           1,
+	}
+	tw := newTestWriter()
+	log.SetOutput(tw)
+	defer log.SetOutput(os.Stderr)
+	log.SetFlags(0)
+	defer log.SetFlags(log.LstdFlags)
+	np.dialToPipe(ctx, &net.TCPConn{})
+	cancel()
+	if !strings.HasPrefix(string(tw.result), "Failed") {
+		t.Errorf("got prefix: [%s]\nwant prefix: [%s]", string(tw.result), "Failed")
+	}
 }
 
 type connMock struct{}
