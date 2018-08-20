@@ -112,21 +112,19 @@ func TestDebugWorker(t *testing.T) {
 	defer log.SetFlags(log.LstdFlags)
 	go debugWorker(ctx, clientCh)
 	clientCh <- &net.TCPConn{}
-	//_, err := pr.Read(b)
-	/*
-		pw.Close()
-		_, err := ioutil.ReadAll(pr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pr.Close()
-	*/
 	time.Sleep(1200 * time.Millisecond)
-	cancel()
 	close(clientCh)
+	cancel()
 	if mes != string(tw.result) {
 		t.Errorf("got: [%s]\nwant: [%s]", string(tw.result), mes)
 	}
+	clientCh = make(chan net.Conn, 1)
+	tw.result = tw.result[:0]
+	ctx, cancel = context.WithCancel(context.Background())
+	go debugWorker(ctx, clientCh)
+	clientCh <- &connMock{}
+	time.Sleep(1200 * time.Millisecond)
+	cancel()
 }
 
 func TestMainLoop(t *testing.T) {
