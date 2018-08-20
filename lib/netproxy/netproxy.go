@@ -71,6 +71,11 @@ func (n *NetProxy) acceptWorker(ctx context.Context, l net.Listener, clientCh ch
 	for {
 		conn, err := l.Accept()
 		if err != nil {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			log.Printf("Failed Listener.Accept err:%s", err)
 			continue
 		}

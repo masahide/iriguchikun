@@ -16,7 +16,7 @@ import (
 )
 
 func TestPrintIfErr(t *testing.T) {
-	tw := &testWriter{}
+	tw := newTestWriter()
 	log.SetOutput(tw)
 	defer log.SetOutput(os.Stderr)
 	log.SetFlags(0)
@@ -70,10 +70,15 @@ func (c *testCloser) Close() error { return c.err }
 
 type testWriter struct{ result []byte }
 
-func (w *testWriter) Write(p []byte) (n int, err error) { w.result = p; return len(w.result), nil }
+func newTestWriter() *testWriter { return &testWriter{[]byte{}} }
+
+func (w *testWriter) Write(p []byte) (n int, err error) {
+	w.result = append(w.result, p...)
+	return len(w.result), nil
+}
 
 func TestCloseConn(t *testing.T) {
-	tw := &testWriter{}
+	tw := newTestWriter()
 	log.SetOutput(tw)
 	defer log.SetOutput(os.Stderr)
 	log.SetFlags(0)
@@ -100,7 +105,7 @@ func TestDebugWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	clientCh := make(chan net.Conn, 1)
 	//pr, pw := io.Pipe()
-	tw := &testWriter{}
+	tw := newTestWriter()
 	log.SetOutput(tw)
 	defer log.SetOutput(os.Stderr)
 	log.SetFlags(0)
@@ -135,7 +140,7 @@ func TestMainLoop(t *testing.T) {
 	log.SetOutput(os.Stderr)
 	log.SetFlags(log.LstdFlags)
 	outSock := startTmpListener(ctx)
-	tp := NetProxy{
+	tp := &NetProxy{
 		ListenNetwork:        "unix",
 		ListenAddr:           inSock,
 		DialNetwork:          "unix",
@@ -188,7 +193,6 @@ func TestAcceptWorker(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	inSock := path.Join(tmpDir, "in.sock")
-	t.Errorf("inSock:%s", inSock)
 	ctx, cancel := context.WithCancel(context.Background())
 	log.SetOutput(os.Stderr)
 	log.SetFlags(log.LstdFlags)
@@ -209,10 +213,18 @@ func TestAcceptWorker(t *testing.T) {
 		DebugLevel:           1,
 	}
 	clientCh := make(chan net.Conn, 1)
+	tw := newTestWriter()
+	log.SetOutput(tw)
+	defer log.SetOutput(os.Stderr)
+	log.SetFlags(0)
+	defer log.SetFlags(log.LstdFlags)
 	go tp.acceptWorker(ctx, &listenerMock{&net.TCPConn{}}, clientCh)
 	clientCh <- &net.TCPConn{}
 	time.Sleep(100 * time.Millisecond)
 	cancel()
+	if !strings.HasPrefix(string(tw.result), "Failed") {
+		t.Errorf("got prefix: [%s]\nwant prefix: [%s]", string(tw.result), "Failed")
+	}
 }
 
 func startTmpListener(ctx context.Context) string {
@@ -221,11 +233,11 @@ func startTmpListener(ctx context.Context) string {
 		log.Fatal(err)
 	}
 	sock := path.Join(tmpDir, "tmp.sock")
+	l, err := net.Listen("unix", sock)
+	if err != nil {
+		log.Fatal(err)
+	}
 	go func() {
-		l, err := net.Listen("unix", sock)
-		if err != nil {
-			log.Fatal(err)
-		}
 		defer l.Close()
 		defer os.RemoveAll(tmpDir)
 		for {
@@ -254,7 +266,6 @@ func TestOpenSvConn(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	inSock := path.Join(tmpDir, "in.sock")
-	t.Errorf("inSock:%s", inSock)
 	ctx, cancel := context.WithCancel(context.Background())
 	log.SetOutput(os.Stderr)
 	log.SetFlags(log.LstdFlags)
