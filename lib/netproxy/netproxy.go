@@ -50,7 +50,7 @@ func (n *NetProxy) MainLoop(ctx context.Context) {
 		go debugWorker(ctx, clientCh)
 	}
 	l, err := net.Listen(n.ListenNetwork, n.ListenAddr)
-	printErr(log.Fatal, err)
+	fatalIfErr(log.Fatal, err)
 	defer closeConn(l)
 	go n.acceptWorker(ctx, l, clientCh)
 	<-ctx.Done()
@@ -71,7 +71,12 @@ func (n *NetProxy) acceptWorker(ctx context.Context, l net.Listener, clientCh ch
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			log.Println(err)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			log.Printf("Failed Listener.Accept err:%s", err)
 			continue
 		}
 		n.setKeepAliveIfTCP(conn)
@@ -85,8 +90,8 @@ func (n *NetProxy) acceptWorker(ctx context.Context, l net.Listener, clientCh ch
 func (n *NetProxy) setKeepAliveIfTCP(conn net.Conn) {
 	switch v := conn.(type) {
 	case *net.TCPConn:
-		printErr(log.Println, v.SetKeepAlive(n.KeepAlive))
-		printErr(log.Println, v.SetKeepAlivePeriod(n.KeepAlivePeriod))
+		printIfErr("conn.SetKeepAlive", v.SetKeepAlive(n.KeepAlive))
+		printIfErr("conn.SetKeepAlivePeriod", v.SetKeepAlivePeriod(n.KeepAlivePeriod))
 	}
 }
 
@@ -98,8 +103,8 @@ func (n *NetProxy) dialToPipe(ctx context.Context, client net.Conn) {
 		return
 	}
 	deadline := time.Now().Add(n.PipeDeadLine)
-	printErr(log.Println, svConn.SetDeadline(deadline))
-	printErr(log.Println, client.SetDeadline(deadline))
+	printIfErr("svConn.SetDeadline", svConn.SetDeadline(deadline))
+	printIfErr("client.SetDeadline", client.SetDeadline(deadline))
 	errSv2Cl := pipe(client, svConn)
 	errCl2Sv := pipe(svConn, client)
 	select {
@@ -154,7 +159,13 @@ func closeConn(c io.Closer) {
 	}
 }
 
-func printErr(printFunc func(...interface{}), err error) {
+func printIfErr(prefix string, err error) {
+	if err != nil {
+		log.Printf("Failed %s err:%s", prefix, err)
+	}
+}
+
+func fatalIfErr(printFunc func(...interface{}), err error) {
 	if err != nil {
 		printFunc(err)
 	}
