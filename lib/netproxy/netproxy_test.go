@@ -204,76 +204,42 @@ func TestAcceptWorker(t *testing.T) {
 	var cancel context.CancelFunc
 	log.SetFlags(0)
 
+	var tests = []struct {
+		conn       net.Conn
+		outCh      bool
+		wantPrefix string
+		wantEmpty  bool
+		err        error
+	}{
+		{&net.TCPConn{}, false, "Failed", false, nil},
+		{&connMock{}, false, "", true, nil},
+		{&connMock{}, true, "", true, nil},
+		{&connMock{}, false, "Failed", false, errors.New("err")},
+	}
 	// test1
-	ctx, cancel = context.WithCancel(context.Background())
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw := newTestWriter()
-	log.SetOutput(tw)
-	go np.acceptWorker(ctx, &listenerMock{&net.TCPConn{}, nil}, clientCh)
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-	if !strings.HasPrefix(string(tw.result), "Failed") {
-		t.Errorf("got prefix: [%s]\nwant prefix: [%s]", string(tw.result), "Failed")
-	}
-
-	// test2
-	ctx, cancel = context.WithCancel(context.Background())
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw = newTestWriter()
-	log.SetOutput(tw)
-	go np.acceptWorker(ctx, &listenerMock{&connMock{}, nil}, clientCh)
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-	if string(tw.result) != "" {
-		t.Errorf("got [%s]\nwant : \"\"", string(tw.result))
-	}
-
-	// test3
-	ctx, cancel = context.WithCancel(context.Background())
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw = newTestWriter()
-	log.SetOutput(tw)
-	go np.acceptWorker(ctx, &listenerMock{&connMock{}, nil}, clientCh)
-	<-clientCh
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-	if string(tw.result) != "" {
-		t.Errorf("got [%s]\nwant : \"\"", string(tw.result))
-	}
-
-	// test4
-	ctx, cancel = context.WithCancel(context.Background())
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw = newTestWriter()
-	log.SetOutput(tw)
-	go np.acceptWorker(ctx, &listenerMock{&connMock{}, nil}, clientCh)
-	<-clientCh
-	time.Sleep(100 * time.Millisecond)
-	cancel()
-	if string(tw.result) != "" {
-		t.Errorf("got [%s]\nwant : \"\"", string(tw.result))
-	}
-
-	// test5
-	ctx, cancel = context.WithCancel(context.Background())
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw = newTestWriter()
-	log.SetOutput(tw)
-	go np.acceptWorker(ctx, &listenerMock{&connMock{}, errors.New("err")}, clientCh)
-	time.Sleep(10 * time.Millisecond)
-	cancel()
-	if !strings.HasPrefix(string(tw.result), "Failed") {
-		t.Errorf("got prefix: [%s]\nwant prefix: [%s]", string(tw.result), "Failed")
+	for i, test := range tests {
+		ctx, cancel = context.WithCancel(context.Background())
+		if np, err = mockNetProxy(ctx); err != nil {
+			t.Fatal(err)
+		}
+		tw := newTestWriter()
+		log.SetOutput(tw)
+		go np.acceptWorker(ctx, &listenerMock{test.conn, test.err}, clientCh)
+		if test.outCh {
+			<-clientCh
+		}
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+		if test.wantPrefix != "" {
+			if !strings.HasPrefix(string(tw.result), test.wantPrefix) {
+				t.Errorf("test %d got prefix: [%s]\nwant prefix: [%s]", i, string(tw.result), test.wantPrefix)
+			}
+		}
+		if test.wantEmpty {
+			if string(tw.result) != "" {
+				t.Errorf("test %d got [%s]\nwant : \"\"", i, string(tw.result))
+			}
+		}
 	}
 }
 
