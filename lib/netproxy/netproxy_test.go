@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -32,10 +33,10 @@ func TestPrintIfErr(t *testing.T) {
 	}
 	for _, test := range tests {
 		printIfErr(test.prefix, test.err)
-		if string(tw.result) != test.want {
-			t.Errorf("test.err(%v) = \"%v\"; want %v", test.err, string(tw.result), test.want)
+		if string(tw.getResult()) != test.want {
+			t.Errorf("test.err(%v) = \"%v\"; want %v", test.err, string(tw.getResult()), test.want)
 		}
-		tw.result = tw.result[:0]
+		tw.setResult(tw.getResult()[:0])
 	}
 }
 
@@ -68,13 +69,26 @@ type testCloser struct{ err error }
 
 func (c *testCloser) Close() error { return c.err }
 
-type testWriter struct{ result []byte }
+type testWriter struct {
+	result []byte
+	mu     sync.Mutex
+}
 
-func newTestWriter() *testWriter { return &testWriter{[]byte{}} }
+func newTestWriter() *testWriter { return &testWriter{[]byte{}, sync.Mutex{}} }
 
 func (w *testWriter) Write(p []byte) (n int, err error) {
-	w.result = append(w.result, p...)
-	return len(w.result), nil
+	w.setResult(append(w.getResult(), p...))
+	return len(w.getResult()), nil
+}
+func (w *testWriter) setResult(b []byte) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.result = b
+}
+func (w *testWriter) getResult() []byte {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.result
 }
 
 func TestCloseConn(t *testing.T) {
@@ -91,9 +105,9 @@ func TestCloseConn(t *testing.T) {
 		{&testCloser{}, ""},
 	}
 	for _, test := range tests {
-		tw.result = []byte{}
+		tw.setResult([]byte{})
 		closeConn(test.c)
-		result := strings.TrimSpace(string(tw.result))
+		result := strings.TrimSpace(string(tw.getResult()))
 		if result != test.want {
 			t.Errorf("closeConn(%v) = \"%v\"; want %v", test.c, result, test.want)
 		}
@@ -115,11 +129,11 @@ func TestDebugWorker(t *testing.T) {
 	time.Sleep(1200 * time.Millisecond)
 	close(clientCh)
 	cancel()
-	if mes != string(tw.result) {
-		t.Errorf("got: [%s]\nwant: [%s]", string(tw.result), mes)
+	if mes != string(tw.getResult()) {
+		t.Errorf("got: [%s]\nwant: [%s]", string(tw.getResult()), mes)
 	}
 	clientCh = make(chan net.Conn, 1)
-	tw.result = tw.result[:0]
+	tw.setResult(tw.getResult()[:0])
 	ctx, cancel = context.WithCancel(context.Background())
 	go debugWorker(ctx, clientCh)
 	clientCh <- &connMock{}
@@ -231,13 +245,13 @@ func TestAcceptWorker(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		cancel()
 		if test.wantPrefix != "" {
-			if !strings.HasPrefix(string(tw.result), test.wantPrefix) {
-				t.Errorf("test %d got prefix: [%s]\nwant prefix: [%s]", i, string(tw.result), test.wantPrefix)
+			if !strings.HasPrefix(string(tw.getResult()), test.wantPrefix) {
+				t.Errorf("test %d got prefix: [%s]\nwant prefix: [%s]", i, string(tw.getResult()), test.wantPrefix)
 			}
 		}
 		if test.wantEmpty {
 			if string(tw.result) != "" {
-				t.Errorf("test %d got [%s]\nwant : \"\"", i, string(tw.result))
+				t.Errorf("test %d got [%s]\nwant : \"\"", i, string(tw.getResult()))
 			}
 		}
 	}
@@ -282,7 +296,7 @@ func TestOpenSvConn(t *testing.T) {
 	if np, err = mockNetProxy(ctx); err != nil {
 		t.Fatal(err)
 	}
-	_, err = np.openSvConn()
+	_, err = np.openSvConn(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,24 +304,43 @@ func TestOpenSvConn(t *testing.T) {
 }
 
 func TestDialToPipe(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
 	var np *NetProxy
 	var err error
+	var ctx context.Context
+	var cancel context.CancelFunc
+	var tests = []struct {
+		conn       net.Conn
+		dialAddr   string
+		wantPrefix string
+		err        error
+	}{
+		{&net.TCPConn{}, "", "Failed", nil},
+		{&connMock{}, "0.0.0.0:0", "dial err", nil},
+	}
 	// test1
-	if np, err = mockNetProxy(ctx); err != nil {
-		t.Fatal(err)
-	}
-	tw := newTestWriter()
-	log.SetOutput(tw)
-	defer log.SetOutput(os.Stderr)
 	log.SetFlags(0)
+	defer log.SetOutput(os.Stderr)
 	defer log.SetFlags(log.LstdFlags)
-	np.dialToPipe(ctx, &net.TCPConn{})
-	cancel()
-	if !strings.HasPrefix(string(tw.result), "Failed") {
-		t.Errorf("got prefix: [%s]\nwant prefix: [%s]", string(tw.result), "Failed")
+	for i, test := range tests {
+		ctx, cancel = context.WithCancel(context.Background())
+		if np, err = mockNetProxy(ctx); err != nil {
+			t.Fatal(err)
+		}
+		tw := newTestWriter()
+		log.SetOutput(tw)
+		if test.dialAddr != "" {
+			np.DialAddr = test.dialAddr
+		}
+		np.dialToPipe(ctx, test.conn)
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+		time.Sleep(100 * time.Millisecond)
+		if test.wantPrefix != "" {
+			if !strings.HasPrefix(string(tw.getResult()), test.wantPrefix) {
+				t.Errorf("test %d got prefix: [%s]\nwant prefix: [%s]", i, string(tw.getResult()), test.wantPrefix)
+			}
+		}
 	}
-	time.Sleep(200 * time.Millisecond)
 }
 
 type connMock struct{}
