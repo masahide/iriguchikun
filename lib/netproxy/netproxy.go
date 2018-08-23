@@ -108,19 +108,25 @@ func (n *NetProxy) dialToPipe(ctx context.Context, client net.Conn) {
 	printIfErr("client.SetDeadline", client.SetDeadline(deadline))
 	errSv2Cl := pipe(client, svConn)
 	errCl2Sv := pipe(svConn, client)
-	select {
-	case err = <-errCl2Sv:
-	case err = <-errSv2Cl:
-	case <-ctx.Done():
-	}
-	n.printErrIferror(err)
+	n.printErrIferror(getFirstErr(ctx, errSv2Cl, errCl2Sv))
 	closeConn(client)
 	closeConn(svConn)
+	n.readAllErr(errCl2Sv)
+	n.readAllErr(errSv2Cl)
+}
 
-	for err = range errCl2Sv {
-		n.printErrIferror(err)
+func getFirstErr(ctx context.Context, a, b chan error) error {
+	var err error
+	select {
+	case err = <-a:
+	case err = <-b:
+	case <-ctx.Done():
 	}
-	for err = range errSv2Cl {
+	return err
+}
+
+func (n *NetProxy) readAllErr(errCh chan error) {
+	for err := range errCh {
 		n.printErrIferror(err)
 	}
 }
