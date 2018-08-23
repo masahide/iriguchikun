@@ -343,6 +343,15 @@ func TestDialToPipe(t *testing.T) {
 	}
 }
 
+func TestGetFirstErr(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := getFirstErr(ctx, make(chan error), make(chan error))
+	if err != nil {
+		t.Fatalf("getFirstErr got:%s want:nil", err)
+	}
+}
+
 type connMock struct{}
 
 func (c *connMock) Read(b []byte) (n int, err error)   { return }
