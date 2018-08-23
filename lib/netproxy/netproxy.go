@@ -84,6 +84,7 @@ func (n *NetProxy) acceptWorker(ctx context.Context, l net.Listener, clientCh ch
 		case <-ctx.Done():
 			return
 		case clientCh <- conn:
+			continue
 		}
 	}
 }
