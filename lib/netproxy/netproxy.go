@@ -84,6 +84,7 @@ func (n *NetProxy) acceptWorker(ctx context.Context, l net.Listener, clientCh ch
 		case <-ctx.Done():
 			return
 		case clientCh <- conn:
+			continue
 		}
 	}
 }
@@ -96,7 +97,7 @@ func (n *NetProxy) setKeepAliveIfTCP(conn net.Conn) {
 }
 
 func (n *NetProxy) dialToPipe(ctx context.Context, client net.Conn) {
-	svConn, err := n.openSvConn()
+	svConn, err := n.openSvConn(ctx)
 	if err != nil {
 		log.Println(err)
 		closeConn(client)
@@ -130,10 +131,15 @@ func (n *NetProxy) printErrIferror(err error) {
 	}
 }
 
-func (n *NetProxy) openSvConn() (net.Conn, error) {
+func (n *NetProxy) openSvConn(ctx context.Context) (net.Conn, error) {
 	for i := 0; i < n.MaxRetry; i++ { // exponential backoff
 		svConn, err := net.DialTimeout(n.DialNetwork, n.DialAddr, n.DialTimeout)
 		if err != nil {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
 			log.Printf("dial err:%s, addr:%s", err, n.DialAddr)
 			time.Sleep(n.RetryTime * time.Duration(i*i))
 			continue
