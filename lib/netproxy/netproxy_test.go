@@ -345,8 +345,20 @@ func TestDialToPipe(t *testing.T) {
 
 func TestGetFirstErr(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
+	a := make(chan error, 1)
+	b := make(chan error, 1)
+	a <- errors.New("a")
+	err := getFirstErr(ctx, a, b)
+	if err.Error() != "a" {
+		t.Fatalf("getFirstErr got:%s want:a", err)
+	}
+	b <- errors.New("b")
+	err = getFirstErr(ctx, a, b)
+	if err.Error() != "b" {
+		t.Fatalf("getFirstErr got:%s want:b", err)
+	}
 	cancel()
-	err := getFirstErr(ctx, make(chan error), make(chan error))
+	err = getFirstErr(ctx, a, b)
 	if err != nil {
 		t.Fatalf("getFirstErr got:%s want:nil", err)
 	}
