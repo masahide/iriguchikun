@@ -11,17 +11,19 @@ TCP/UDP/unix domain socketの同時接続数の調整を行うdaemonです。
 - 順番待ちのクライアントはtcp-keepaliveで接続維持
 
 
-# Usage 
+# Usage
 
-```
+```bash
 $ ./iriguchikun  --help
 Usage of ./iriguchikun:
-  -debug int
-    	debug level
+  -debug
+    	debug flag
   -dialAddr string
     	Dial address (ipaddress or /path/to/xxx.sock) (default "192.168.99.100:3306")
   -dialNetwork string
     	Dial network (tcp or udp or unix) (default "tcp")
+  -dialTLS
+    	Dial tls connect
   -dialTimeout duration
     	Dial timeout (default 5s)
   -keepAlive
@@ -42,6 +44,8 @@ Usage of ./iriguchikun:
     	Pipe dead line wait time (default 2m0s)
   -retryTime duration
     	Retry wait time (default 1s)
+  -tlsSkipVerify
+    	Insecure skip TLS verify
   -version
     	Show version
 ```

@@ -169,14 +169,23 @@ func TestDialWorker(t *testing.T) {
 		MaxRetry:             5,
 		MaxServerConnections: 1,
 		MaxClinetConnections: 1,
-		DebugLevel:           1,
+		Debug:                true,
 	}
+	tw := newTestWriter()
+	log.SetOutput(tw)
+	log.SetFlags(0)
+	defer log.SetOutput(os.Stderr)
+	defer log.SetFlags(log.LstdFlags)
 	ctx, cancel := context.WithCancel(context.Background())
 	clientCh := make(chan net.Conn, 1)
 	go np.dialWorker(ctx, clientCh)
 	clientCh <- &net.TCPConn{}
 	time.Sleep(100 * time.Millisecond)
 	cancel()
+	time.Sleep(100 * time.Millisecond)
+	if !strings.HasPrefix(string(tw.getResult()), "context canceled") {
+		t.Errorf("got [%s]\nwant : context canceled", string(tw.getResult()))
+	}
 }
 
 func mockNetProxy(ctx context.Context) (*NetProxy, error) {
@@ -199,7 +208,7 @@ func mockNetProxy(ctx context.Context) (*NetProxy, error) {
 		MaxRetry:             5,
 		MaxServerConnections: 1,
 		MaxClinetConnections: 1,
-		DebugLevel:           1,
+		Debug:                true,
 	}
 	go func() {
 		<-ctx.Done()
@@ -250,7 +259,7 @@ func TestAcceptWorker(t *testing.T) {
 			}
 		}
 		if test.wantEmpty {
-			if string(tw.result) != "" {
+			if string(tw.getResult()) != "" {
 				t.Errorf("test %d got [%s]\nwant : \"\"", i, string(tw.getResult()))
 			}
 		}
@@ -322,12 +331,12 @@ func TestDialToPipe(t *testing.T) {
 	defer log.SetOutput(os.Stderr)
 	defer log.SetFlags(log.LstdFlags)
 	for i, test := range tests {
+		tw := newTestWriter()
+		log.SetOutput(tw)
 		ctx, cancel = context.WithCancel(context.Background())
 		if np, err = mockNetProxy(ctx); err != nil {
 			t.Fatal(err)
 		}
-		tw := newTestWriter()
-		log.SetOutput(tw)
 		if test.dialAddr != "" {
 			np.DialAddr = test.dialAddr
 		}
@@ -362,6 +371,18 @@ func TestGetFirstErr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getFirstErr got:%s want:nil", err)
 	}
+}
+func TestDial(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	np := &NetProxy{DialTLS: false}
+	if _, err := np.dial(ctx); err == nil {
+		t.Fatal("dial err got:nil want:!nil")
+	}
+	np = &NetProxy{DialTLS: true}
+	if _, err := np.dial(ctx); err == nil {
+		t.Fatal("dial err got:nil want:!nil")
+	}
+	cancel()
 }
 
 type connMock struct{}
