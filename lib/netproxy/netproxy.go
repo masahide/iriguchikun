@@ -2,6 +2,7 @@
 package netproxy
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -11,21 +12,23 @@ import (
 	"context"
 )
 
-// NetProxy is main struct
+// NetProxy is main config struct
 type NetProxy struct {
 	ListenNetwork        string
 	ListenAddr           string
 	DialNetwork          string
 	DialAddr             string
+	DialTLSConfig        tls.Config
 	DialTimeout          time.Duration
 	PipeDeadLine         time.Duration
 	RetryTime            time.Duration
-	KeepAlive            bool
 	KeepAlivePeriod      time.Duration
 	MaxRetry             int
 	MaxServerConnections int
 	MaxClinetConnections int
-	DebugLevel           int
+	DialTLS              bool
+	KeepAlive            bool
+	Debug                bool
 }
 
 func debugWorker(ctx context.Context, clientCh chan net.Conn) {
@@ -46,7 +49,7 @@ func (n *NetProxy) MainLoop(ctx context.Context) {
 	for i := 0; i < n.MaxServerConnections; i++ {
 		go n.dialWorker(ctx, clientCh)
 	}
-	if n.DebugLevel > 0 {
+	if n.Debug {
 		go debugWorker(ctx, clientCh)
 	}
 	l, err := net.Listen(n.ListenNetwork, n.ListenAddr)
@@ -137,9 +140,17 @@ func (n *NetProxy) printErrIferror(err error) {
 	}
 }
 
+func (n *NetProxy) dial(ctx context.Context) (net.Conn, error) {
+	dialer := &net.Dialer{Timeout: n.DialTimeout}
+	if n.DialTLS {
+		return tls.DialWithDialer(dialer, n.DialNetwork, n.DialAddr, &n.DialTLSConfig)
+	}
+	return dialer.DialContext(ctx, n.DialNetwork, n.DialAddr)
+}
+
 func (n *NetProxy) openSvConn(ctx context.Context) (net.Conn, error) {
 	for i := 0; i < n.MaxRetry; i++ { // exponential backoff
-		svConn, err := net.DialTimeout(n.DialNetwork, n.DialAddr, n.DialTimeout)
+		svConn, err := n.dial(ctx)
 		if err != nil {
 			select {
 			case <-ctx.Done():

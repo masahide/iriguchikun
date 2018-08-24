@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"time"
@@ -28,7 +29,9 @@ var (
 		MaxRetry:             5,
 		MaxServerConnections: 2,
 		MaxClinetConnections: 10,
-		DebugLevel:           0,
+		Debug:                false,
+		DialTLS:              false,
+		DialTLSConfig:        tls.Config{InsecureSkipVerify: false},
 	}
 	showVer bool
 )
@@ -39,6 +42,8 @@ func init() {
 	flag.StringVar(&t.DialNetwork, "dialNetwork", t.DialNetwork, "Dial network (tcp or udp or unix)")
 	flag.StringVar(&t.DialAddr, "dialAddr", t.DialAddr, "Dial address (ipaddress or /path/to/xxx.sock)")
 	flag.DurationVar(&t.DialTimeout, "dialTimeout", t.DialTimeout, "Dial timeout")
+	flag.BoolVar(&t.DialTLS, "dialTLS", t.DialTLS, "Dial tls connect")
+	flag.BoolVar(&t.DialTLSConfig.InsecureSkipVerify, "tlsSkipVerify", t.DialTLSConfig.InsecureSkipVerify, "Insecure skip TLS verify")
 	flag.DurationVar(&t.RetryTime, "retryTime", t.RetryTime, "Retry wait time")
 	flag.IntVar(&t.MaxRetry, "maxRetry", t.MaxRetry, "Max retry")
 	flag.DurationVar(&t.PipeDeadLine, "pipeDeadLine", t.PipeDeadLine, "Pipe dead line wait time")
@@ -46,7 +51,7 @@ func init() {
 	flag.BoolVar(&t.KeepAlive, "keepAlive", t.KeepAlive, "send keepalive messages on the connection")
 	flag.IntVar(&t.MaxServerConnections, "maxServer", t.MaxServerConnections, "Max server connections")
 	flag.IntVar(&t.MaxClinetConnections, "maxClinet", t.MaxClinetConnections, "Max client connections")
-	flag.IntVar(&t.DebugLevel, "debug", t.DebugLevel, "debug level")
+	flag.BoolVar(&t.Debug, "debug", t.Debug, "debug flag")
 	flag.BoolVar(&showVer, "version", showVer, "Show version")
 	flag.Parse()
 }
