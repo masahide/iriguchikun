@@ -1,9 +1,11 @@
-SOURCE_FILES?=./...
-BIN?=iriguchikun
-PKG?=./lib/netproxy
-TEST_PATTERN?=.
-TEST_OPTIONS?=
-OS=$(shell uname -s)
+SOURCE_FILES ?= ./...
+BIN ?= iriguchikun
+PKG ?= ./lib/netproxy
+MAINSRC?= cmd/$(BIN)/main.go
+SRCS ?= $(PKG)/* $(MAINSRC)
+TEST_PATTERN ?=.
+TEST_OPTIONS ?=
+OS? = $(shell uname -s)
 
 export PATH := ./bin:$(PATH)
 
@@ -67,7 +69,7 @@ clean:
 	rm $(BIN)
 .PHONY: clean
 
-$(BIN):
+$(BIN): $(SRCS)
 	go build -o $@ cmd/$(BIN)/main.go
 
 ## Generate the static documentation

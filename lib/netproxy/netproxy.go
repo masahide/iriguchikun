@@ -129,8 +129,7 @@ func getFirstErr(ctx context.Context, a, b chan error) error {
 }
 
 func (n *NetProxy) readAllErr(errCh chan error) {
-	for err := range errCh {
-		n.printErrIferror(err)
+	for range errCh {
 	}
 }
 
