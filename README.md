@@ -58,13 +58,13 @@ Usage of ./iriguchikun:
 For RHEL/CentOS:
 
 ```bash
-sudo yum install https://github.com/masahide/iriguchikun/releases/download/v1.2.1/iriguchikun_amd64.rpm
+sudo yum install https://github.com/masahide/iriguchikun/releases/download/v1.2.2/iriguchikun_amd64.rpm
 ```
 
 For Ubuntu/Debian:
 
 ```bash
-wget -qO /tmp/assumer_amd64.deb https://github.com/masahide/iriguchikun/releases/download/v1.2.1/iriguchikun_amd64.deb && sudo dpkg -i /tmp/iriguchikun_amd64.deb
+wget -qO /tmp/iriguchikun_amd64.deb https://github.com/masahide/iriguchikun/releases/download/v1.2.2/iriguchikun_amd64.deb && sudo dpkg -i /tmp/iriguchikun_amd64.deb
 ```
 
 ### macOS
@@ -73,7 +73,7 @@ wget -qO /tmp/assumer_amd64.deb https://github.com/masahide/iriguchikun/releases
 install via [brew](https://brew.sh):
 
 ```bash
-brew tap masahide/assumer https://github.com/masahide/iriguchikun
+brew tap masahide/iriguchikun https://github.com/masahide/iriguchikun
 brew install iriguchikun
 ```
 
