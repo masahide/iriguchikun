@@ -2,14 +2,13 @@
 package netproxy
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"time"
-
-	"context"
 )
 
 // NetProxy is main config struct
@@ -25,7 +24,7 @@ type NetProxy struct {
 	KeepAlivePeriod      time.Duration
 	MaxRetry             int
 	MaxServerConnections int
-	MaxClinetConnections int
+	MaxClientConnections int
 	DialTLS              bool
 	KeepAlive            bool
 	Debug                bool
@@ -45,7 +44,7 @@ func debugWorker(ctx context.Context, clientCh chan net.Conn) {
 
 // MainLoop ctxでキャンセルされるまでloop
 func (n *NetProxy) MainLoop(ctx context.Context) {
-	clientCh := make(chan net.Conn, n.MaxClinetConnections)
+	clientCh := make(chan net.Conn, n.MaxClientConnections)
 	for i := 0; i < n.MaxServerConnections; i++ {
 		go n.dialWorker(ctx, clientCh)
 	}

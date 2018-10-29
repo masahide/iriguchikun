@@ -168,7 +168,7 @@ func TestDialWorker(t *testing.T) {
 		KeepAlivePeriod:      10 * time.Second,
 		MaxRetry:             5,
 		MaxServerConnections: 1,
-		MaxClinetConnections: 1,
+		MaxClientConnections: 1,
 		Debug:                true,
 	}
 	tw := newTestWriter()
@@ -207,7 +207,7 @@ func mockNetProxy(ctx context.Context) (*NetProxy, error) {
 		KeepAlivePeriod:      10 * time.Millisecond,
 		MaxRetry:             5,
 		MaxServerConnections: 1,
-		MaxClinetConnections: 1,
+		MaxClientConnections: 1,
 		Debug:                true,
 	}
 	go func() {

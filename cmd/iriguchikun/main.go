@@ -28,7 +28,7 @@ var (
 		KeepAlivePeriod:      10 * time.Second,
 		MaxRetry:             5,
 		MaxServerConnections: 2,
-		MaxClinetConnections: 10,
+		MaxClientConnections: 10,
 		Debug:                false,
 		DialTLS:              false,
 		DialTLSConfig:        tls.Config{InsecureSkipVerify: false},
@@ -50,7 +50,7 @@ func init() {
 	flag.DurationVar(&t.KeepAlivePeriod, "keepAlivePeriod", t.KeepAlivePeriod, "TCP period between keep alives")
 	flag.BoolVar(&t.KeepAlive, "keepAlive", t.KeepAlive, "send keepalive messages on the connection")
 	flag.IntVar(&t.MaxServerConnections, "maxServer", t.MaxServerConnections, "Max server connections")
-	flag.IntVar(&t.MaxClinetConnections, "maxClinet", t.MaxClinetConnections, "Max client connections")
+	flag.IntVar(&t.MaxClientConnections, "maxClient", t.MaxClientConnections, "Max client connections")
 	flag.BoolVar(&t.Debug, "debug", t.Debug, "debug flag")
 	flag.BoolVar(&showVer, "version", showVer, "Show version")
 	flag.Parse()
