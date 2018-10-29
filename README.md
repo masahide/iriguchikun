@@ -14,40 +14,40 @@ TCP/UDP/unix domain socketの同時接続数の調整を行うdaemonです。
 # Usage
 
 ```bash
-$ ./iriguchikun  --help
+$ ./iriguchikun --help
 Usage of ./iriguchikun:
   -debug
-    	debug flag
+        debug flag
   -dialAddr string
-    	Dial address (ipaddress or /path/to/xxx.sock) (default "192.168.99.100:3306")
+        Dial address (ipaddress or /path/to/xxx.sock) (default "192.168.99.100:3306")
   -dialNetwork string
-    	Dial network (tcp or udp or unix) (default "tcp")
+        Dial network (tcp or udp or unix) (default "tcp")
   -dialTLS
-    	Dial tls connect
+        Dial tls connect
   -dialTimeout duration
-    	Dial timeout (default 5s)
+        Dial timeout (default 5s)
   -keepAlive
-    	send keepalive messages on the connection (default true)
+        send keepalive messages on the connection (default true)
   -keepAlivePeriod duration
-    	TCP period between keep alives (default 10s)
+        TCP period between keep alives (default 10s)
   -listenAddr string
-    	Listen address (ipaddress or /path/to/xxx.sock) (default ":5444")
+        Listen address (ipaddress or /path/to/xxx.sock) (default ":5444")
   -listenNetwork string
-    	Listen network (tcp or udp or unix) (default "tcp")
-  -maxClinet int
-    	Max client connections (default 10)
+        Listen network (tcp or udp or unix) (default "tcp")
+  -maxClient int
+        Max client connections (default 10)
   -maxRetry int
-    	Max retry (default 5)
+        Max retry (default 5)
   -maxServer int
-    	Max server connections (default 2)
+        Max server connections (default 2)
   -pipeDeadLine duration
-    	Pipe dead line wait time (default 2m0s)
+        Pipe dead line wait time (default 2m0s)
   -retryTime duration
-    	Retry wait time (default 1s)
+        Retry wait time (default 1s)
   -tlsSkipVerify
-    	Insecure skip TLS verify
+        Insecure skip TLS verify
   -version
-    	Show version
+        Show version
 ```
 
 
